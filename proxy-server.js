@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 const ALLOWED_SITES = {
-    'espncricinfo': 'https://www.espncricinfo.com',
+    'espncricinfo': 'https://www.espncricinfo.com/cricket-news',
     'bcci': 'https://www.bcci.tv',
     'indiatvnews': 'https://www.indiatvnews.com/sports'
 };
