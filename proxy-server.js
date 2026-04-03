@@ -1,7 +1,12 @@
 /**
  * SPORTSKHOJ - India Sports News Proxy Server
- * Versão: v0.1 Beta
+ * Versão: v0.1.1 Beta
  * Data: 2 Abril 2025
+ * 
+ * CHANGELOG v0.1.1 Beta:
+ * - FIX: Headers melhorados para ESPNCricinfo (contornar 403)
+ * - Adicionados Sec-Ch-Ua e outros headers modernos
+ * - Referer e DNT específicos para ESPN
  * 
  * CHANGELOG v0.1 Beta:
  * - Primeira versão funcional
@@ -21,7 +26,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 const ALLOWED_SITES = {
-    'espncricinfo': 'https://www.espncricinfo.com/cricket-news',
+    'espncricinfo': 'https://www.espncricinfo.com',
     'bcci': 'https://www.bcci.tv',
     'indiatvnews': 'https://www.indiatvnews.com/sports'
 };
@@ -80,13 +85,33 @@ app.get('/proxy/:site', async (req, res) => {
     try {
         console.log(`[SPORTSKHOJ v0.1] Fetching: ${targetUrl}`);
         
+        // Headers específicos por site para contornar bloqueios
+        let headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1'
+        };
+        
+        // ESPNCricinfo precisa headers EXTRA para passar proteção
+        if (site === 'espncricinfo') {
+            headers['Referer'] = 'https://www.google.com/';
+            headers['DNT'] = '1';
+            headers['Connection'] = 'keep-alive';
+        }
+        
         const response = await fetch(targetUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
-                'Cache-Control': 'no-cache'
-            },
+            headers: headers,
             redirect: 'follow'
         });
 
@@ -267,7 +292,7 @@ app.get('/', (req, res) => {
             <body>
                 <div class="container">
                     <h1>🏏 SPORTSKHOJ Proxy Server</h1>
-                    <div class="version">v0.1 Beta</div>
+                    <div class="version">v0.1.1 Beta</div>
                     <p class="status">Server is running!</p>
                     <p style="font-size: 12px; color: #7f8c8d;">Last updated: 2 April 2025</p>
                     
