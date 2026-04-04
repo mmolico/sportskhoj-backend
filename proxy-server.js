@@ -4,8 +4,8 @@
  * Data: 2 Abril 2025
  * 
  * CHANGELOG v0.2 Beta:
- * - NOVO: Cricbuzz substitui ESPNCricinfo (sem problemas 403!)
- * - Site #1 de cricket na Índia - 50M+ users
+ * - NOVO: Times of India Sports adicionado
+ * - 3 sites: BCCI, India TV, Times of India
  * - Idle time: Recomenda-se UptimeRobot para manter servidor acordado
  * 
  * CHANGELOG v0.1.1 Beta:
@@ -25,9 +25,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 const ALLOWED_SITES = {
-    'cricbuzz': 'https://www.cricbuzz.com',
     'bcci': 'https://www.bcci.tv',
-    'indiatvnews': 'https://www.indiatvnews.com/sports'
+    'indiatvnews': 'https://www.indiatvnews.com/sports',
+    'timesofindia': 'https://timesofindia.indiatimes.com/sports'
 };
 
 app.get('/proxy/:site', async (req, res) => {
@@ -115,19 +115,18 @@ app.get('/proxy/:site', async (req, res) => {
         html = html.replace('<head>', `<head><base href="${targetUrl}/" target="_self">`);
 
         // ═══════════════════════════════════════════════════
-        // CRICBUZZ - Tratamento específico
+        // Times of India Sports - Tratamento específico
         // ═══════════════════════════════════════════════════
-        if (site === 'cricbuzz') {
-            // Reescrita de links
+        if (site === 'timesofindia') {
             html = html.replace(/href="\/([^"]*)"(?![^<]*\.css)/g, (match, path) => {
                 if (path.includes('.css') || path.includes('.js')) {
                     return `href="${baseUrl.origin}/${path}"`;
                 }
-                return `href="/proxy/cricbuzz?url=${encodeURIComponent('/' + path)}"`;
+                return `href="/proxy/timesofindia?url=${encodeURIComponent('/' + path)}"`;
             });
 
             const css = `
-                <style id="sportskhoj-cricbuzz">
+                <style id="sportskhoj-toi">
                     html, body { overflow-y: auto !important; }
                     .ad-container, iframe[src*="doubleclick"] { display: none !important; }
                 </style>
@@ -282,9 +281,9 @@ app.get('/', (req, res) => {
                     
                     <div class="sites">
                         <strong>Available Sites:</strong>
-                        <div class="site-item">🏏 Cricbuzz (India's #1 cricket site!)</div>
                         <div class="site-item">🏏 BCCI.tv (official board)</div>
-                        <div class="site-item">🏏 India TV Sports (news)</div>
+                        <div class="site-item">📰 India TV Sports (news)</div>
+                        <div class="site-item">📰 Times of India Sports (major news)</div>
                     </div>
                     <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; font-size: 13px; color: #856404;">
                         <strong>⚡ Tip:</strong> Use UptimeRobot to keep server awake!<br>
