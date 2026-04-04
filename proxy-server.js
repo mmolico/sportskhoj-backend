@@ -1,19 +1,18 @@
 /**
  * SPORTSKHOJ - India Sports News Proxy Server
- * Versão: v0.1.1 Beta
+ * Versão: v0.2 Beta
  * Data: 2 Abril 2025
  * 
+ * CHANGELOG v0.2 Beta:
+ * - NOVO: Cricbuzz substitui ESPNCricinfo (sem problemas 403!)
+ * - Site #1 de cricket na Índia - 50M+ users
+ * - Idle time: Recomenda-se UptimeRobot para manter servidor acordado
+ * 
  * CHANGELOG v0.1.1 Beta:
- * - FIX: Headers melhorados para ESPNCricinfo (contornar 403)
- * - Adicionados Sec-Ch-Ua e outros headers modernos
- * - Referer e DNT específicos para ESPN
+ * - FIX: Headers melhorados para ESPNCricinfo (tentativa)
  * 
  * CHANGELOG v0.1 Beta:
  * - Primeira versão funcional
- * - ESPNCricinfo: navegação interna + remoção de ads
- * - BCCI: navegação interna
- * - India TV News: navegação interna + scroll fix
- * - Sistema de versionamento implementado
  */
 
 const express = require('express');
@@ -26,7 +25,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 const ALLOWED_SITES = {
-    'espncricinfo': 'https://www.espncricinfo.com',
+    'cricbuzz': 'https://www.cricbuzz.com',
     'bcci': 'https://www.bcci.tv',
     'indiatvnews': 'https://www.indiatvnews.com/sports'
 };
@@ -83,32 +82,17 @@ app.get('/proxy/:site', async (req, res) => {
     }
 
     try {
-        console.log(`[SPORTSKHOJ v0.1] Fetching: ${targetUrl}`);
+        console.log(`[SPORTSKHOJ v0.2] Fetching: ${targetUrl}`);
         
-        // Headers específicos por site para contornar bloqueios
-        let headers = {
+        // Headers padrão que funcionam bem
+        const headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-IN,en;q=0.9,hi;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
             'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache',
-            'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-            'Sec-Ch-Ua-Mobile': '?0',
-            'Sec-Ch-Ua-Platform': '"Windows"',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Upgrade-Insecure-Requests': '1'
+            'Pragma': 'no-cache'
         };
-        
-        // ESPNCricinfo precisa headers EXTRA para passar proteção
-        if (site === 'espncricinfo') {
-            headers['Referer'] = 'https://www.google.com/';
-            headers['DNT'] = '1';
-            headers['Connection'] = 'keep-alive';
-        }
         
         const response = await fetch(targetUrl, {
             headers: headers,
@@ -131,19 +115,19 @@ app.get('/proxy/:site', async (req, res) => {
         html = html.replace('<head>', `<head><base href="${targetUrl}/" target="_self">`);
 
         // ═══════════════════════════════════════════════════
-        // ESPNCricinfo - Tratamento específico
+        // CRICBUZZ - Tratamento específico
         // ═══════════════════════════════════════════════════
-        if (site === 'espncricinfo') {
+        if (site === 'cricbuzz') {
             // Reescrita de links
             html = html.replace(/href="\/([^"]*)"(?![^<]*\.css)/g, (match, path) => {
                 if (path.includes('.css') || path.includes('.js')) {
                     return `href="${baseUrl.origin}/${path}"`;
                 }
-                return `href="/proxy/espncricinfo?url=${encodeURIComponent('/' + path)}"`;
+                return `href="/proxy/cricbuzz?url=${encodeURIComponent('/' + path)}"`;
             });
 
             const css = `
-                <style id="sportskhoj-espn">
+                <style id="sportskhoj-cricbuzz">
                     html, body { overflow-y: auto !important; }
                     .ad-container, iframe[src*="doubleclick"] { display: none !important; }
                 </style>
@@ -292,15 +276,19 @@ app.get('/', (req, res) => {
             <body>
                 <div class="container">
                     <h1>🏏 SPORTSKHOJ Proxy Server</h1>
-                    <div class="version">v0.1.1 Beta</div>
+                    <div class="version">v0.2 Beta</div>
                     <p class="status">Server is running!</p>
                     <p style="font-size: 12px; color: #7f8c8d;">Last updated: 2 April 2025</p>
                     
                     <div class="sites">
                         <strong>Available Sites:</strong>
-                        <div class="site-item">🏏 ESPNCricinfo (full coverage)</div>
+                        <div class="site-item">🏏 Cricbuzz (India's #1 cricket site!)</div>
                         <div class="site-item">🏏 BCCI.tv (official board)</div>
                         <div class="site-item">🏏 India TV Sports (news)</div>
+                    </div>
+                    <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; font-size: 13px; color: #856404;">
+                        <strong>⚡ Tip:</strong> Use UptimeRobot to keep server awake!<br>
+                        Prevents 15-second idle time on first load.
                     </div>
                 </div>
             </body>
