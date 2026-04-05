@@ -1,14 +1,16 @@
 /**
  * SPORTSKHOJ - India Sports News Proxy Server
- * Versão: v0.3 Beta
+ * Versão: v0.4 Beta
  * Data: 2 Abril 2025
  * 
+ * CHANGELOG v0.4 Beta:
+ * - SOLUÇÃO OUT-OF-THE-BOX: Cricbuzz MOBILE (m.cricbuzz.com)
+ * - Versão mobile = HTML simples, MUITO menos JavaScript
+ * - Funciona MELHOR em iframes que versão desktop
+ * - Mantém tratamento agressivo
+ * 
  * CHANGELOG v0.3 Beta:
- * - CRICBUZZ com tratamento SUPER AGRESSIVO
- * - Reescrita completa de URLs (assets + API + Next.js)
- * - Error handling global injetado
- * - Remoção total de headers de segurança
- * - Bypass de verificações de iframe
+ * - Cricbuzz desktop com tratamento super agressivo (quebrava)
  * 
  * CHANGELOG v0.2 Beta:
  * - Tentativas anteriores com diferentes sites
@@ -27,7 +29,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 const ALLOWED_SITES = {
-    'cricbuzz': 'https://www.cricbuzz.com',
+    'cricbuzz': 'https://m.cricbuzz.com',
     'bcci': 'https://www.bcci.tv',
     'indiatvnews': 'https://www.indiatvnews.com/sports'
 };
@@ -332,13 +334,13 @@ app.get('/', (req, res) => {
             <body>
                 <div class="container">
                     <h1>🏏 SPORTSKHOJ Proxy Server</h1>
-                    <div class="version">v0.3 Beta</div>
+                    <div class="version">v0.4 Beta</div>
                     <p class="status">Server is running!</p>
                     <p style="font-size: 12px; color: #7f8c8d;">Last updated: 2 April 2025</p>
                     
                     <div class="sites">
                         <strong>Available Sites:</strong>
-                        <div class="site-item">🏏 Cricbuzz (advanced iframe bypass)</div>
+                        <div class="site-item">🏏 Cricbuzz MOBILE (optimized for iframe!)</div>
                         <div class="site-item">🏏 BCCI.tv (official board)</div>
                         <div class="site-item">📰 India TV Sports (news)</div>
                     </div>
