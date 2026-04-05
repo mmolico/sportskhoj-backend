@@ -1,15 +1,17 @@
 /**
  * SPORTSKHOJ - India Sports News Proxy Server
- * Versão: v0.2 Beta
+ * Versão: v0.3 Beta
  * Data: 2 Abril 2025
  * 
- * CHANGELOG v0.2 Beta:
- * - NOVO: Times of India Sports adicionado
- * - 3 sites: BCCI, India TV, Times of India
- * - Idle time: Recomenda-se UptimeRobot para manter servidor acordado
+ * CHANGELOG v0.3 Beta:
+ * - CRICBUZZ com tratamento SUPER AGRESSIVO
+ * - Reescrita completa de URLs (assets + API + Next.js)
+ * - Error handling global injetado
+ * - Remoção total de headers de segurança
+ * - Bypass de verificações de iframe
  * 
- * CHANGELOG v0.1.1 Beta:
- * - FIX: Headers melhorados para ESPNCricinfo (tentativa)
+ * CHANGELOG v0.2 Beta:
+ * - Tentativas anteriores com diferentes sites
  * 
  * CHANGELOG v0.1 Beta:
  * - Primeira versão funcional
@@ -25,9 +27,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 
 const ALLOWED_SITES = {
+    'cricbuzz': 'https://www.cricbuzz.com',
     'bcci': 'https://www.bcci.tv',
-    'indiatvnews': 'https://www.indiatvnews.com/sports',
-    'timesofindia': 'https://timesofindia.indiatimes.com/sports'
+    'indiatvnews': 'https://www.indiatvnews.com/sports'
 };
 
 app.get('/proxy/:site', async (req, res) => {
@@ -115,20 +117,73 @@ app.get('/proxy/:site', async (req, res) => {
         html = html.replace('<head>', `<head><base href="${targetUrl}/" target="_self">`);
 
         // ═══════════════════════════════════════════════════
-        // Times of India Sports - Tratamento específico
+        // CRICBUZZ - TRATAMENTO SUPER AGRESSIVO
         // ═══════════════════════════════════════════════════
-        if (site === 'timesofindia') {
-            html = html.replace(/href="\/([^"]*)"(?![^<]*\.css)/g, (match, path) => {
-                if (path.includes('.css') || path.includes('.js')) {
+        if (site === 'cricbuzz') {
+            // REESCREVER URLs - MUITO AGRESSIVO
+            // Assets
+            html = html.replace(/src="\/([^"]*)"/g, `src="${baseUrl.origin}/$1"`);
+            html = html.replace(/src='\/([^']*)'/g, `src='${baseUrl.origin}/$1'`);
+            html = html.replace(/href="\/([^"]*\.(css|js)[^"]*)"/g, `href="${baseUrl.origin}/$1"`);
+            
+            // Data attributes
+            html = html.replace(/data-src="\/([^"]*)"/g, `data-src="${baseUrl.origin}/$1"`);
+            html = html.replace(/data-url="\/([^"]*)"/g, `data-url="${baseUrl.origin}/$1"`);
+            
+            // JSON e API URLs dentro de scripts
+            html = html.replace(/"\/api\//g, `"${baseUrl.origin}/api/`);
+            html = html.replace(/"\/_next\//g, `"${baseUrl.origin}/_next/`);
+            
+            // Links de navegação - deixar alguns passarem pelo proxy
+            html = html.replace(/href="\/([^"]*)"(?![^<]*\.(css|js))/g, (match, path) => {
+                // Se for asset, manter absoluto
+                if (path.includes('.css') || path.includes('.js') || path.includes('_next')) {
                     return `href="${baseUrl.origin}/${path}"`;
                 }
-                return `href="/proxy/timesofindia?url=${encodeURIComponent('/' + path)}"`;
+                // Navegação pode ir direto (ou proxy se preferires)
+                return `href="${baseUrl.origin}/${path}"`;
             });
 
+            // INJECTAR ERROR HANDLING GLOBAL
+            const errorHandling = `
+                <script>
+                    // Global error handler - evita que erros quebrem tudo
+                    window.addEventListener('error', function(e) {
+                        console.log('Error caught:', e.message);
+                        e.preventDefault();
+                        return true;
+                    });
+                    
+                    window.addEventListener('unhandledrejection', function(e) {
+                        console.log('Promise rejection caught:', e.reason);
+                        e.preventDefault();
+                    });
+                    
+                    // Remover verificações de iframe
+                    try {
+                        Object.defineProperty(window, 'top', {
+                            get: function() { return window; }
+                        });
+                        Object.defineProperty(window, 'parent', {
+                            get: function() { return window; }
+                        });
+                    } catch(e) {}
+                </script>
+            `;
+            
+            html = html.replace('</head>', `${errorHandling}</head>`);
+
             const css = `
-                <style id="sportskhoj-toi">
-                    html, body { overflow-y: auto !important; }
-                    .ad-container, iframe[src*="doubleclick"] { display: none !important; }
+                <style id="sportskhoj-cricbuzz">
+                    html, body { 
+                        overflow-y: auto !important; 
+                        overflow-x: hidden !important;
+                    }
+                    .ad-container, 
+                    iframe[src*="doubleclick"],
+                    [class*="advertisement"] { 
+                        display: none !important; 
+                    }
                 </style>
             `;
             html = html.replace('</head>', `${css}</head>`);
@@ -174,10 +229,12 @@ app.get('/proxy/:site', async (req, res) => {
             html = html.replace('</head>', `${css}</head>`);
         }
 
+        // Headers - remover segurança para permitir iframe
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.setHeader('X-Frame-Options', 'ALLOWALL');
-        res.setHeader('Content-Security-Policy', '');
+        // NÃO setar X-Frame-Options (permite iframe)
+        res.setHeader('Content-Security-Policy', "frame-ancestors *");
         res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', '*');
         
         res.send(html);
         
@@ -275,15 +332,15 @@ app.get('/', (req, res) => {
             <body>
                 <div class="container">
                     <h1>🏏 SPORTSKHOJ Proxy Server</h1>
-                    <div class="version">v0.2 Beta</div>
+                    <div class="version">v0.3 Beta</div>
                     <p class="status">Server is running!</p>
                     <p style="font-size: 12px; color: #7f8c8d;">Last updated: 2 April 2025</p>
                     
                     <div class="sites">
                         <strong>Available Sites:</strong>
+                        <div class="site-item">🏏 Cricbuzz (advanced iframe bypass)</div>
                         <div class="site-item">🏏 BCCI.tv (official board)</div>
                         <div class="site-item">📰 India TV Sports (news)</div>
-                        <div class="site-item">📰 Times of India Sports (major news)</div>
                     </div>
                     <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; font-size: 13px; color: #856404;">
                         <strong>⚡ Tip:</strong> Use UptimeRobot to keep server awake!<br>
